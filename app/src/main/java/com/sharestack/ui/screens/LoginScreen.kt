@@ -15,11 +15,15 @@ import com.sharestack.ui.theme.ShareStackTheme
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit = {},
-    onNavigateToHome: () -> Unit = {}
+    onNavigateToHome: (String, String) -> Unit = {_, _ ->}
 ) {
     // State variables to hold what the user types
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    // Validation Logic
+    val emailPattern = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
+    val isEmailValid = email.matches(emailPattern)
 
     Column(
         modifier = Modifier
@@ -53,6 +57,7 @@ fun LoginScreen(
             onValueChange = { email = it },
             label = { Text("Email Address") },
             modifier = Modifier.fillMaxWidth(),
+            isError = email.isNotEmpty() && !isEmailValid,
             singleLine = true
         )
 
@@ -72,8 +77,8 @@ fun LoginScreen(
 
         // Login Button
         Button(
-            onClick = onNavigateToHome,
-            enabled = email.isNotBlank() && password.isNotBlank(),
+            onClick = { onNavigateToHome(email,password) },
+            enabled = email.isNotBlank() && isEmailValid && password.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)

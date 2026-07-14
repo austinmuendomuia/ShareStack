@@ -13,18 +13,25 @@ import androidx.compose.ui.unit.sp
 import com.sharestack.ui.theme.ShareStackTheme
 
 @Composable
-fun RegisterScreen(onNavigateToLogin: () -> Unit = {}, onNavigateToHome: () -> Unit = {}) {
+fun RegisterScreen(onNavigateToLogin: () -> Unit = {},
+                   onNavigateToHome: (String, String, String) -> Unit = {_, _, _ ->}) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
+
+    val emailPattern = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
+    val isEmailValid = email.matches(emailPattern)
+
     // THE MAGIC LOGIC:
     // Checks that no fields are empty, AND that the passwords are an exact match.
     val isFormValid = name.isNotBlank() &&
+            isEmailValid &&
             email.isNotBlank() &&
             password.isNotBlank() &&
             password == confirmPassword
+
 
     Column(
         modifier = Modifier
@@ -65,6 +72,7 @@ fun RegisterScreen(onNavigateToLogin: () -> Unit = {}, onNavigateToHome: () -> U
             onValueChange = { email = it },
             label = { Text("Email Address") },
             modifier = Modifier.fillMaxWidth(),
+            isError = email.isNotEmpty() && !isEmailValid,
             singleLine = true
         )
 
@@ -104,7 +112,7 @@ fun RegisterScreen(onNavigateToLogin: () -> Unit = {}, onNavigateToHome: () -> U
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick =  onNavigateToHome,
+            onClick =   {onNavigateToHome(name,email,password)},
             enabled = isFormValid, // Button stays disabled until everything is perfect
             modifier = Modifier
                 .fillMaxWidth()

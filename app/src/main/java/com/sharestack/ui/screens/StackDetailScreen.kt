@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sharestack.models.Proposal
 import com.sharestack.ui.theme.ShareStackTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sharestack.viewModel.ShareStackViewModel
 
 @Composable
 fun RedistributionDialog(
@@ -88,24 +90,31 @@ fun RedistributionDialog(
 
 @Composable
 fun ActiveProposalCard(
+    proposalId: String, // <-- Requires the exact ID
+    viewModel: ShareStackViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
-    onConfirmRedistribution: (Map<String, Double>) -> Unit = {}
+    onConfirmRedistribution: (Map<String, Double>) -> Unit = {},
+    onVoteNo: () -> Unit = {}
 ) {
-    // State to control when the popup shows
+    // UI State
     var showRedistributionPopup by remember { mutableStateOf(false) }
+    var isLegalAgreed by remember { mutableStateOf(false) } // <-- Tracks the checkbox
 
-    // Instantiate the Data Class directly
-    val activePitch = Proposal(
-        id = "p1",
-        stockTarget = "Nvidia (NVDA)",
-        targetAmount = 17000.0,
-        activeMembers = listOf("Joe", "Austin", "Sarah")
-    )
+    // Fetch the REAL proposal from the Master Brain!
+    val activePitch = viewModel.getProposalById(proposalId)
 
-    // Mapping variables directly to the object properties
-    val stockTarget = activePitch.stockTarget
-    val targetAmount = activePitch.targetAmount
-    val activeMembers = activePitch.activeMembers
+
+    // Dummy Data
+//    val activePitch = Proposal(
+//        id = "p1",
+//        stockTarget = "Nvidia (NVDA)",
+//        targetAmount = 17000.0,
+//        activeMembers = listOf("Joe", "Austin") // Sarah already voted No!
+//    )
+
+    val stockTarget = activePitch?.stockTarget ?: "Unknown Stock"
+    val targetAmount = activePitch?.targetAmount ?: 0.0
+    val remainingMembers = activePitch?.activeMembers ?: emptyList()
 
     Column(
         modifier = Modifier
@@ -123,40 +132,80 @@ fun ActiveProposalCard(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(all = 16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                .padding(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+            shape = MaterialTheme.shapes.extraLarge, // Gives it that premium rounded look
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
-                modifier = Modifier.padding(all = 16.dp)
+                modifier = Modifier.padding(24.dp)
             ) {
-                Text(
-                    "Active Proposal",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
+                Text("Active Proposal", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Text(
                     text = "Buy Ksh $targetAmount of $stockTarget",
                     color = MaterialTheme.colorScheme.secondary,
+                    fontSize = 16.sp,
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                 )
 
+                // VISUAL CUE: The Shortfall Warning
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier
+                        .padding(bottom = 16.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Notice: A member opted out. Remaining members must cover the shortfall if approved.",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+
+                // THE NEW LEGAL CHECKBOX
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isLegalAgreed,
+                        onCheckedChange = { isLegalAgreed = it },
+                        colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                    )
+                    Text(
+                        text = "I agree to bind my funds to the group Co-Ownership terms for this transaction.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 18.sp,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+
+                // ACTION BUTTONS
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    // VOTE YES BUTTON
+                    // VOTE YES BUTTON - Disabled until the box is checked!
                     Button(
-                        onClick = { /* ToDo: Send Yes to backend */ },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
+                        onClick = { showRedistributionPopup = true },
+                        enabled = isLegalAgreed,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.weight(1f).height(48.dp)
                     ) {
                         Text("Vote Yes")
                     }
 
-                    // VOTE NO BUTTON (Triggers Redistribution)
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    // VOTE NO BUTTON
                     OutlinedButton(
-                        onClick = { showRedistributionPopup = true }
+                        onClick = onVoteNo,
+                        modifier = Modifier.weight(1f).height(48.dp)
                     ) {
                         Text("Vote No")
                     }
@@ -164,11 +213,11 @@ fun ActiveProposalCard(
             }
         }
 
-        // Connect the Dialog to the State
+        // Redistribution Dialog
         if (showRedistributionPopup) {
             RedistributionDialog(
                 targetAmount = targetAmount,
-                remainingMembers = activeMembers,
+                remainingMembers = remainingMembers,
                 onDismiss = { showRedistributionPopup = false },
                 onConfirm = { newSplit ->
                     onConfirmRedistribution(newSplit)
@@ -183,6 +232,6 @@ fun ActiveProposalCard(
 @Composable
 fun PreviewActiveProposalCard() {
     ShareStackTheme {
-        ActiveProposalCard()
+        ActiveProposalCard(proposalId="p1")
     }
 }

@@ -60,6 +60,14 @@ class ShareStackViewModel : ViewModel() {
         return stack?.activeProposals ?: emptyList()
     }
 
+    // Get a specific proposal by its ID
+    fun getProposalById(proposalId: String): Proposal? {
+        stacks.value.forEach { stack ->
+            stack.activeProposals.find { it.id == proposalId }?.let { return it }
+        }
+        return null
+    }
+
     // ========== ACTIONS ==========
 
     // Buy a stock (deduct from balance)
@@ -78,17 +86,25 @@ class ShareStackViewModel : ViewModel() {
         repository.fundWallet(amount)
     }
 
-    // ========== AUTH ==========
-
+    // ========== AUTHENTICATION ==========
     fun login(email: String, password: String) {
         viewModelScope.launch {
             authService.login(email, password)
+
+            // Check if they registered during this session
+            val storedName = authService.getRegisteredName(email)
+
+            // If we found them, use their name. If not, default to Demo User.
+            val nameToUse = storedName ?: "Demo User"
+            repository.updateUserName(nameToUse)
         }
     }
 
     fun signup(name: String, email: String, password: String) {
         viewModelScope.launch {
             authService.signup(name, email, password)
+            // Save the exact name they typed into the registration form
+            repository.updateUserName(name)
         }
     }
 
@@ -99,9 +115,17 @@ class ShareStackViewModel : ViewModel() {
     }
 
     // ========== PROPOSAL ==========
-
     fun createProposal(stackId: String, stockTicker: String, targetAmount: Double) {
-        println("New Proposal: $stockTicker @ Ksh $targetAmount for group $stackId")
+        // 1. Create the new proposal object using what the user typed
+        val newPitch = Proposal(
+            id = "p_${System.currentTimeMillis()}", // Generates a unique random ID
+            stockTarget = stockTicker,
+            targetAmount = targetAmount,
+            activeMembers = listOf("Austin", "Joe") // The current active members
+        )
+
+        // 2. Send it to the repository so the UI instantly redraws!
+        repository.addProposalToStack(stackId, newPitch)
     }
 
     // ========== REDISTRIBUTION ==========

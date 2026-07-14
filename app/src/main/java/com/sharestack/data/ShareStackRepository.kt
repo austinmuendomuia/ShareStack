@@ -97,8 +97,24 @@ class ShareStackRepository {
             false
         }
     }
+        fun updateUserName(newName: String) {
+        _currentUser.update { it.copy(name = newName) }
+    }
 
     fun getStackById(id: String): Stack? {
         return _stacks.value.find { it.id == id }
+    }
+    // Adds a new pitch to the specific group's list
+    fun addProposalToStack(stackId: String, proposal: Proposal) {
+        _stacks.update { currentStacks ->
+            currentStacks.map { stack ->
+                if (stack.id == stackId) {
+                    // Make a copy of the stack and add the new proposal to its list
+                    stack.copy(activeProposals = stack.activeProposals + proposal)
+                } else {
+                    stack
+                }
+            }
+        }
     }
 }

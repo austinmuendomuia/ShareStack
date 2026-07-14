@@ -39,8 +39,8 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToRegister = {
                                     navController.navigate("register")
                                 },
-                                onNavigateToHome = {
-                                    viewModel.login("demo@example.com", "password")
+                                onNavigateToHome = { email, password ->
+                                    viewModel.login(email, password)
                                     navController.navigate("home")
                                 }
                             )
@@ -52,25 +52,32 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToLogin = {
                                     navController.navigate("login")
                                 },
-                                onNavigateToHome = {
-                                    viewModel.signup("Demo User", "demo@example.com", "password")
+                                onNavigateToHome = { name,email,password ->
+                                    viewModel.signup(name, email, password)
                                     navController.navigate("home")
                                 }
                             )
                         }
-
                         // HOME DASHBOARD
                         composable("home") {
                             HomeDashboardScreen(
-                                onNavigateToGroupHub = {
-                                    // Navigate to group detail with first group ID
-                                    val firstGroupId = viewModel.stacks.value.firstOrNull()?.id ?: "1"
-                                    navController.navigate("group-detail/$firstGroupId")
+                                viewModel = viewModel,
+                                onNavigateToGroupHub = { clickedGroupId ->
+                                    // Navigates to the specific group card clicked
+                                    navController.navigate("group-detail/$clickedGroupId")
                                 },
                                 onNavigateToProposal = {
-                                    // Navigate to active proposal card
-                                    navController.navigate("proposal-detail")
+                                    navController.navigate("proposal-detail/p1")
+                                },
+
+                                onLogout = {
+                                    viewModel.logout()
+                                    // Clears the backstack so they can't hit 'back' to enter the app again
+                                    navController.navigate("login") {
+                                        popUpTo(0)
+                                    }
                                 }
+
                             )
                         }
 
@@ -82,11 +89,12 @@ class MainActivity : ComponentActivity() {
                             val groupId = backStackEntry.arguments?.getString("groupId") ?: "1"
                             GroupDetailScreen(
                                 groupId = groupId,
+                                viewModel=viewModel,
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 },
-                                onNavigateToProposal = {
-                                    navController.navigate("proposal-detail")
+                                onNavigateToProposal = { clickedProposalId ->
+                                    navController.navigate("proposal-detail/$clickedProposalId")
                                 },
                                 onNavigateToCreate = {
                                     navController.navigate("create-proposal/$groupId")
@@ -113,13 +121,24 @@ class MainActivity : ComponentActivity() {
                         }
 
                         // PROPOSAL DETAIL (Active Proposal Card)
-                        composable("proposal-detail") {
+                        composable(
+                            route="proposal-detail/{proposalId}",
+                            arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val proposalId = backStackEntry.arguments?.getString("proposalId") ?: "p1"
+
                             ActiveProposalCard(
+                                proposalId = proposalId,
+                                viewModel= viewModel,
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 },
                                 onConfirmRedistribution = { newSplit ->
-                                    viewModel.redistributeFunds("p1", newSplit)
+                                    viewModel.redistributeFunds(proposalId, newSplit)
+                                    navController.popBackStack()
+                                },
+                                onVoteNo = {
+                                    // They opted out, so we just send them back to the dashboard!
                                     navController.popBackStack()
                                 }
                             )

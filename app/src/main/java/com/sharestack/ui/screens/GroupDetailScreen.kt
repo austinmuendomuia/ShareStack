@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,17 +26,12 @@ fun GroupDetailScreen(
     groupId: String,
     viewModel: ShareStackViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToProposal: () -> Unit = {},
+    onNavigateToProposal: (String) -> Unit = {},
     onNavigateToCreate: () -> Unit = {}
 ) {
-    // Get group data from ViewModel
     val stacks by viewModel.stacks.collectAsState()
-    val currentPrices by viewModel.currentPrices.collectAsState()
-
-    // Find the requested stack
     val stack = stacks.find { it.id == groupId }
 
-    // Dummy data fallback if stack not found
     val activePitch = stack?.activeProposals?.firstOrNull() ?: Proposal(
         id = "p1",
         stockTarget = "Nvidia (NVDA)",
@@ -47,9 +43,6 @@ fun GroupDetailScreen(
     val memberCount = stack?.members?.size ?: 3
     val memberNames = stack?.members?.map { it.name } ?: listOf("Austin", "Joe", "Sarah")
     val sharedVaultBalance = viewModel.balance.collectAsState().value
-    val currentPrice = stack?.let {
-        currentPrices[it.stockSymbol] ?: 0.0
-    } ?: 1050.0
 
     Scaffold(
         topBar = {
@@ -60,15 +53,15 @@ fun GroupDetailScreen(
                         Text("←", fontSize = 28.sp, color = MaterialTheme.colorScheme.onSurface)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToCreate,
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(16.dp), // Makes the FAB a rounded square instead of a perfect circle
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
             ) {
                 Text("+", fontSize = 24.sp, color = MaterialTheme.colorScheme.onPrimary)
             }
@@ -80,21 +73,18 @@ fun GroupDetailScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            // Shared Vault Card
+            // SHARED VAULT CARD - Matching the 24dp roundness and 12dp shadow from the dashboard
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                )
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
             ) {
                 Column(
-                    modifier = Modifier.padding(all = 24.dp),
+                    modifier = Modifier.padding(all = 28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        "Shared Vault Balance",
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    Text("Shared Vault Balance", color = MaterialTheme.colorScheme.onSecondaryContainer)
                     Text(
                         "Ksh ${String.format("%.2f", sharedVaultBalance)}",
                         fontSize = 36.sp,
@@ -104,91 +94,62 @@ fun GroupDetailScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Roster Section
-            Text(
-                "Active Members (${memberCount})",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Text("Active Members (${memberCount})", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Member avatars
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 memberNames.forEach { memberName ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
                             modifier = Modifier
-                                .size(50.dp)
+                                .size(56.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                memberName.first().toString(),
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            Text(memberName.first().toString(), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
                         }
-                        Text(
-                            memberName,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
+                        Text(memberName, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp), fontWeight = FontWeight.Medium)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Proposals List
-            Text(
-                "Proposals",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Text("Proposals", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 12.dp))
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 val proposals = stack?.activeProposals ?: listOf(activePitch)
                 items(proposals) { proposal ->
+                    // PROPOSAL CARDS - Soft shadow and medium rounding
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        onClick = onNavigateToProposal
+                        onClick = {onNavigateToProposal(proposal.id)},
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(all = 16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(all = 20.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text(
-                                    "Buy ${proposal.stockTarget}",
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    "Ksh ${proposal.targetAmount}",
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
+                                Text("Buy ${proposal.stockTarget}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("Ksh ${proposal.targetAmount}", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 4.dp))
                             }
                             Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
-                                modifier = Modifier.padding(all = 4.dp)
+                                shape = RoundedCornerShape(8.dp), // Sharper, pill-like rounding for the tag
+                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
                             ) {
                                 Text(
                                     "Active",
                                     color = MaterialTheme.colorScheme.tertiary,
                                     fontSize = 12.sp,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                 )
                             }
                         }
@@ -202,7 +163,5 @@ fun GroupDetailScreen(
 @Preview(showBackground = true)
 @Composable
 fun PreviewGroupDetailScreen() {
-    ShareStackTheme {
-        GroupDetailScreen(groupId = "1")
-    }
+    ShareStackTheme { GroupDetailScreen(groupId = "1") }
 }
